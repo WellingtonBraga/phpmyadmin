@@ -55,19 +55,6 @@ if (! empty($sql_query)) {
     if ((!empty($parser->statements[0]))
         && ($parser->statements[0] instanceof PhpMyAdmin\SqlParser\Statements\SelectStatement)
     ) {
-        // Finding aliases and removing them, but we keep track of them to be
-        // able to replace them in select expression too.
-        $aliases = [];
-        foreach ($parser->statements[0]->from as $from) {
-            if ((!empty($from->table)) && (!empty($from->alias))) {
-                $aliases[$from->alias] = $from->table;
-                // We remove the alias of the table because they are going to
-                // be replaced anyway.
-                $from->alias = null;
-                $from->expr = null; // Force rebuild.
-            }
-        }
-
         // Rebuilding the SELECT and FROM clauses.
         if (count($parser->statements[0]->from) > 0
             && count($parser->statements[0]->union) === 0
@@ -98,26 +85,9 @@ if (! empty($sql_query)) {
             $replaces
         );
 
-        // Removing the aliases by finding the alias followed by a dot.
+
         $tokens = PhpMyAdmin\SqlParser\Lexer::getTokens($sql_query);
-        foreach ($aliases as $alias => $table) {
-            $tokens = PhpMyAdmin\SqlParser\Utils\Tokens::replaceTokens(
-                $tokens,
-                [
-                    [
-                        'value_str' => $alias,
-                    ],
-                    [
-                        'type' => PhpMyAdmin\SqlParser\Token::TYPE_OPERATOR,
-                        'value_str' => '.',
-                    ]
-                ],
-                [
-                    new PhpMyAdmin\SqlParser\Token($table),
-                    new PhpMyAdmin\SqlParser\Token('.', PhpMyAdmin\SqlParser\Token::TYPE_OPERATOR)
-                ]
-            );
-        }
+
         $sql_query = PhpMyAdmin\SqlParser\TokensList::build($tokens);
     }
 
